@@ -3,7 +3,7 @@
 resource "digitalocean_vpc" "vpc" {
   name     = "${var.surname}-vpc-new"
   region   = var.region
-  ip_range = "10.10.10.0/24"
+  ip_range = "10.10.20.0/24"
 }
 
 # 2. Firewall
