@@ -12,20 +12,20 @@ jobs:
 
       - name: Set up SSH key
         run: |
-          echo "${{ secrets.SSH_PRIVATE_KEY }}" > task2/ekzamen
-          chmod 600 task2/ekzamen
+          echo "${{ secrets.SSH_PRIVATE_KEY }}" > ekzamen
+          chmod 600 ekzamen
 
       - name: Install Ansible
         run: sudo apt-get update && sudo apt-get install -y ansible
 
       - name: Ansible Check (Validation)
         run: |
-          ansible-playbook -i task2/inventory.ini task2/playbook.yml --check
+          ansible-playbook -i task2/inventory.ini task2/playbook.yml --check --extra-vars "ansible_ssh_private_key_file=ekzamen"
         env:
           ANSIBLE_HOST_KEY_CHECKING: "False"
 
       - name: Ansible Apply (Real Install)
         run: |
-          ansible-playbook -i task2/inventory.ini task2/playbook.yml
+          ansible-playbook -i task2/inventory.ini task2/playbook.yml --extra-vars "ansible_ssh_private_key_file=ekzamen"
         env:
           ANSIBLE_HOST_KEY_CHECKING: "False"
