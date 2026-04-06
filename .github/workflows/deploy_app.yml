@@ -115,10 +115,17 @@ jobs:
             sleep 30
             kubectl get pods -A
             
-            # 5. ПОРТ-ФОРВАРД (вбиваємо старі і запускаємо нові)
+            # 5. ПОРТ-ФОРВАРД (відв'язуємо від сесії)
             pkill -f "port-forward" || true
-            nohup kubectl port-forward --address 0.0.0.0 svc/app-service-dev 8002:80 -n dev > dev-pf.log 2>&1 &
-            nohup kubectl port-forward --address 0.0.0.0 svc/app-service-release 8003:80 -n release > rel-pf.log 2>&1 &
+            
+            # Запускаємо і повністю від'єднуємо від терміналу
+            nohup kubectl port-forward --address 0.0.0.0 svc/app-service-dev 8002:80 -n dev > /dev/null 2>&1 &
+            disown
+            
+            nohup kubectl port-forward --address 0.0.0.0 svc/app-service-release 8003:80 -n release > /dev/null 2>&1 &
+            disown
+            
+            echo "Port-forwarding started successfully!"
             
             # Виведемо список процесів для перевірки
             ps aux | grep port-forward
