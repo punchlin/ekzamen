@@ -2,7 +2,7 @@ terraform {
   backend "s3" {
     endpoint                    = "https://fra1.digitaloceanspaces.com" 
     region                      = "us-east-1" # Це залишаємо як є
-    bucket                      = "punchlin-terraform-state" # ПЕРЕВІР, ЧИ ТАКА НАЗВА В ТЕБЕ В DO!
+    bucket                      = "duplina-terraform-state" # ПЕРЕВІР, ЧИ ТАКА НАЗВА В ТЕБЕ В DO!
     key                         = "terraform.tfstate"
     
     # Ці три рядки критично важливі для DigitalOcean:
