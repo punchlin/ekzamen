@@ -33,24 +33,27 @@ jobs:
           username: root
           key: ${{ secrets.SSH_PRIVATE_KEY }}
           script: |
-            # 1. Очистка старих сервісів (щоб прибрати конфлікт портів)
-            kubectl delete svc app-service-dev -n dev || true
-            kubectl delete svc app-service-release -n release || true
-            sleep 5
-
-            # 2. Застосовуємо маніфести
+            # 1. Застосовуємо маніфести
             kubectl apply -f https://raw.githubusercontent.com/${{ github.repository }}/main/task3/k8s-dev.yaml
             kubectl apply -f https://raw.githubusercontent.com/${{ github.repository }}/main/task3/k8s-release.yaml
 
-            # 3. Вбиваємо старі порт-форварди
+            # 2. Вбиваємо старі процеси
             pkill -f "port-forward" || true
-            sleep 10
+            sleep 5
 
-            # 4. ЗАПУСК ПОРТ-ФОРВАРДУ (фоновий режим)
-            echo "Starting port-forwards..."
+            # 3. Запускаємо порти так, щоб вони жили довше
+            echo "Starting port-forwarding..."
             nohup kubectl port-forward --address 0.0.0.0 svc/app-service-dev 8002:80 -n dev > /dev/null 2>&1 &
             nohup kubectl port-forward --address 0.0.0.0 svc/app-service-release 8003:80 -n release > /dev/null 2>&1 &
-            
-            sleep 5
-            echo "Deployment finished. Checking pods:"
-            kubectl get pods -A
+
+            sleep 10
+
+            # 4. ДІАГНОСТИКА (це покаже нам правду в логах)
+            echo "--- ДІАГНОСТИКА ---"
+            echo "Мій внутрішній IP:"
+            hostname -I
+            echo "Чи слухаються порти 8002 та 8003?"
+            netstat -tuln | grep -E '8002|8003' || echo "ПОРТИ ЗАКРИТІ"
+            echo "Статус подів:"
+            kubectl get pods -A | grep -E 'dev|release'
+            echo "--- КІНЕЦЬ ДІАГНОСТИКИ ---"
