@@ -1,5 +1,3 @@
-variable "surname" { default = "punchlin" }
-variable "region" { default = "fra1" }
 
 # 1. VPC (Змінена назва для уникнення конфлікту)
 resource "digitalocean_vpc" "vpc" {

@@ -1,11 +1,5 @@
-variable "surname" {
-  default = "duplina" 
-}
-
-variable "region" {
-  default = "fra1" # Франкфурт - найближчий до України
-}
-
-variable "do_token" {
-  type = string
-}
+variable "surname" { default = "punchlin" }
+variable "region" { default = "fra1" }
+variable "do_token" {}
+variable "spaces_access_id" {}
+variable "spaces_secret_key" {}
