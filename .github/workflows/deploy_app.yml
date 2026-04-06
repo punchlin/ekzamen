@@ -30,26 +30,32 @@ jobs:
           username: root
           key: ${{ secrets.SSH_PRIVATE_KEY }}
           
-          script: |
-            # 1. Застосовуємо маніфести
+         script: |
+            # 1. Встановлюємо утиліту screen, якщо її нема
+            apt-get update && apt-get install -y screen net-tools
+
+            # 2. Застосовуємо маніфести
             kubectl apply -f https://raw.githubusercontent.com/${{ github.repository }}/main/task3/k8s-dev.yaml
             kubectl apply -f https://raw.githubusercontent.com/${{ github.repository }}/main/task3/k8s-release.yaml
 
-            # 2. Вбиваємо старі порт-форварди, якщо вони зависли
+            # 3. Очищуємо старі процеси
             pkill -f "port-forward" || true
-            sleep 5
+            screen -wipe || true
 
-            # 3. ЗАПУСК ПОРТ-ФОРВАРДУ (НОВИЙ СПОСІБ)
-            # Ми запускаємо команди так, щоб вони не залежали від цього терміналу
-            echo "Starting port-forward for dev..."
-            ( ( nohup kubectl port-forward --address 0.0.0.0 svc/app-service-dev 8002:80 -n dev > /dev/null 2>&1 ) & )
-            
-            echo "Starting port-forward for release..."
-            ( ( nohup kubectl port-forward --address 0.0.0.0 svc/app-service-release 8003:80 -n release > /dev/null 2>&1 ) & )
-            
+            # 4. Чекаємо, поки поди стануть Running
+            echo "Waiting for pods..."
+            sleep 20
+            kubectl get pods -A
+
+            # 5. ЗАПУСК ПОРТ-ФОРВАРДУ ЧЕРЕЗ SCREEN
+            # Це дозволить процесу працювати у фоні вічно
+            echo "Starting background port-forwards..."
+            screen -d -m kubectl port-forward --address 0.0.0.0 svc/app-service-dev 8002:80 -n dev
+            screen -d -m kubectl port-forward --address 0.0.0.0 svc/app-service-release 8003:80 -n release
+
             sleep 5
-            # Перевіряємо, чи порти слухаються
-            netstat -tuln | grep -E '8002|8003' || echo "Ports are not listening yet"
+            # Перевірка, чи відкрилися порти на сервері
+            netstat -tuln | grep -E '8002|8003'
             
             ---
             apiVersion: v1
