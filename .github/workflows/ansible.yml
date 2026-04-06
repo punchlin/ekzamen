@@ -1,0 +1,31 @@
+name: "Ansible Installation Task 2"
+
+on:
+  workflow_dispatch: # Запускаємо вручну після того, як сервер готовий
+
+jobs:
+  ansible:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Set up SSH key
+        run: |
+          echo "${{ secrets.SSH_PRIVATE_KEY }}" > task2/ekzamen
+          chmod 600 task2/ekzamen
+
+      - name: Install Ansible
+        run: sudo apt-get update && sudo apt-get install -y ansible
+
+      - name: Ansible Check (Validation)
+        run: |
+          ansible-playbook -i task2/inventory.ini task2/playbook.yml --check
+        env:
+          ANSIBLE_HOST_KEY_CHECKING: "False"
+
+      - name: Ansible Apply (Real Install)
+        run: |
+          ansible-playbook -i task2/inventory.ini task2/playbook.yml
+        env:
+          ANSIBLE_HOST_KEY_CHECKING: "False"
