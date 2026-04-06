@@ -1,33 +1,40 @@
-name: "Terraform Action"
+name: "Terraform Action Task 1"
 
 on:
   push:
     branches:
       - main
+  workflow_dispatch: # Дозволяє запускати вручну
 
 jobs:
   terraform:
     runs-on: ubuntu-latest
+
+    # ТУТ ВЕСЬ БЛОК env (змінні оточення для секретів)
     env:
       DIGITALOCEAN_TOKEN: ${{ secrets.DO_TOKEN }}
+      # Для бекенду (зберігання стейту)
       AWS_ACCESS_KEY_ID: ${{ secrets.SPACES_ACCESS_KEY }}
       AWS_SECRET_ACCESS_KEY: ${{ secrets.SPACES_SECRET_KEY }}
+      # Для провайдера (щоб створювати ресурси Spaces)
+      SPACES_ACCESS_KEY_ID: ${{ secrets.SPACES_ACCESS_KEY }}
+      SPACES_SECRET_ACCESS_KEY: ${{ secrets.SPACES_SECRET_KEY }}
 
     steps:
       - name: Checkout Code
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
 
       - name: Setup Terraform
-        uses: hashicorp/setup-terraform@v2
+        uses: hashicorp/setup-terraform@v3
 
       - name: Terraform Init
         run: terraform init
         working-directory: ./task1
 
-      - name: Terraform Plan (Validation)
-        run: terraform plan -var="do_token=${{ secrets.DO_TOKEN }}"
+      - name: Terraform Plan
+        run: terraform plan -var="do_token=${{ secrets.DO_TOKEN }}" -var="spaces_access_id=${{ secrets.SPACES_ACCESS_KEY }}" -var="spaces_secret_key=${{ secrets.SPACES_SECRET_KEY }}"
         working-directory: ./task1
 
       - name: Terraform Apply
-        run: terraform apply -auto-approve -var="do_token=${{ secrets.DO_TOKEN }}"
+        run: terraform apply -auto-approve -var="do_token=${{ secrets.DO_TOKEN }}" -var="spaces_access_id=${{ secrets.SPACES_ACCESS_KEY }}" -var="spaces_secret_key=${{ secrets.SPACES_SECRET_KEY }}"
         working-directory: ./task1
