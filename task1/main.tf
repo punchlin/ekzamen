@@ -52,6 +52,7 @@ resource "digitalocean_droplet" "node" {
   size     = "s-2vcpu-4gb"
   image    = "ubuntu-24-04-x64"
   vpc_uuid = digitalocean_vpc.vpc.id
+  ssh_keys = ["d4:1c:9d:49:70:99:94:77:f4:67:b0:66:5c:c4:6e:a2"]
 }
 
 # 4. Сховище (Bucket)
