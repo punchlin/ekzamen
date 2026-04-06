@@ -29,33 +29,28 @@ jobs:
           host: 159.223.31.123 # ВСТАВ СВІЙ IP
           username: root
           key: ${{ secrets.SSH_PRIVATE_KEY }}
+          
           script: |
-            # 1. Створюємо Namespaces
-            kubectl create namespace dev --dry-run=client -o yaml | kubectl apply -f -
-            kubectl create namespace release --dry-run=client -o yaml | kubectl apply -f -
+            # 1. Застосовуємо маніфести
+            kubectl apply -f https://raw.githubusercontent.com/${{ github.repository }}/main/task3/k8s-dev.yaml
+            kubectl apply -f https://raw.githubusercontent.com/${{ github.repository }}/main/task3/k8s-release.yaml
 
-            # 2. Деплоїмо DEV (прописуємо маніфест прямо тут)
-            cat <<EOF | kubectl apply -f -
-            apiVersion: apps/v1
-            kind: Deployment
-            metadata:
-              name: app-dev
-              namespace: dev
-            spec:
-              replicas: 1
-              selector:
-                matchLabels:
-                  app: my-app
-              template:
-                metadata:
-                  labels:
-                    app: my-app
-                spec:
-                  containers:
-                  - name: web-app
-                    image: yulianna2022/my-app:develop
-                    ports:
-                    - containerPort: 80
+            # 2. Вбиваємо старі порт-форварди, якщо вони зависли
+            pkill -f "port-forward" || true
+            sleep 5
+
+            # 3. ЗАПУСК ПОРТ-ФОРВАРДУ (НОВИЙ СПОСІБ)
+            # Ми запускаємо команди так, щоб вони не залежали від цього терміналу
+            echo "Starting port-forward for dev..."
+            ( ( nohup kubectl port-forward --address 0.0.0.0 svc/app-service-dev 8002:80 -n dev > /dev/null 2>&1 ) & )
+            
+            echo "Starting port-forward for release..."
+            ( ( nohup kubectl port-forward --address 0.0.0.0 svc/app-service-release 8003:80 -n release > /dev/null 2>&1 ) & )
+            
+            sleep 5
+            # Перевіряємо, чи порти слухаються
+            netstat -tuln | grep -E '8002|8003' || echo "Ports are not listening yet"
+            
             ---
             apiVersion: v1
             kind: Service
