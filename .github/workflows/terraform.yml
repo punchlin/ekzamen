@@ -1,0 +1,33 @@
+name: "Terraform Action"
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  terraform:
+    runs-on: ubuntu-latest
+    env:
+      DIGITALOCEAN_TOKEN: ${{ secrets.DO_TOKEN }}
+      AWS_ACCESS_KEY_ID: ${{ secrets.SPACES_ACCESS_KEY }}
+      AWS_SECRET_ACCESS_KEY: ${{ secrets.SPACES_SECRET_KEY }}
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v3
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v2
+
+      - name: Terraform Init
+        run: terraform init
+        working-directory: ./task1
+
+      - name: Terraform Plan (Validation)
+        run: terraform plan -var="do_token=${{ secrets.DO_TOKEN }}"
+        working-directory: ./task1
+
+      - name: Terraform Apply
+        run: terraform apply -auto-approve -var="do_token=${{ secrets.DO_TOKEN }}"
+        working-directory: ./task1
