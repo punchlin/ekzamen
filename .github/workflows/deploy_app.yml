@@ -1,13 +1,13 @@
 name: "Deploy Application Task 3"
 
 on:
-  workflow_dispatch: # Запуск вручну
+  workflow_dispatch:
 
 jobs:
   build-and-deploy:
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout Your Repo
+      - name: Checkout Code
         uses: actions/checkout@v4
 
       - name: Login to Docker Hub
@@ -16,25 +16,109 @@ jobs:
           username: ${{ secrets.DOCKER_USERNAME }}
           password: ${{ secrets.DOCKER_PASSWORD }}
 
-      # Тут ми імітуємо роботу з двома версіями застосунку
       - name: Build and Push Docker Images
         run: |
-          docker build -t ${{ secrets.DOCKER_USERNAME }}/my-app:develop https://github.com/YulianSalo/devops-exam-pt2.git#main
-          docker build -t ${{ secrets.DOCKER_USERNAME }}/my-app:1.0.0 https://github.com/YulianSalo/devops-exam-pt2.git#main
-          docker push ${{ secrets.DOCKER_USERNAME }}/my-app:develop
-          docker push ${{ secrets.DOCKER_USERNAME }}/my-app:1.0.0
+          docker build -t yulianna2022/my-app:develop https://github.com/YulianSalo/devops-exam-pt2.git#main
+          docker build -t yulianna2022/my-app:1.0.0 https://github.com/YulianSalo/devops-exam-pt2.git#main
+          docker push yulianna2022/my-app:develop
+          docker push yulianna2022/my-app:1.0.0
 
       - name: Deploy to Minikube via SSH
         uses: appleboy/ssh-action@master
         with:
-          host: 159.223.31.123
+          host: 159.223.31.123 # ВСТАВ СВІЙ IP
           username: root
           key: ${{ secrets.SSH_PRIVATE_KEY }}
           script: |
-            # Копіюємо маніфести (це спрощений варіант, можна через cat)
-            kubectl apply -f https://raw.githubusercontent.com/${{ github.repository }}/main/task3/k8s-dev.yaml
-            kubectl apply -f https://raw.githubusercontent.com/${{ github.repository }}/main/task3/k8s-release.yaml
+            # 1. Створюємо Namespaces
+            kubectl create namespace dev --dry-run=client -o yaml | kubectl apply -f -
+            kubectl create namespace release --dry-run=client -o yaml | kubectl apply -f -
 
-            # Виконуємо вимогу про port-forward (запускаємо у фоні)
+            # 2. Деплоїмо DEV (прописуємо маніфест прямо тут)
+            cat <<EOF | kubectl apply -f -
+            apiVersion: apps/v1
+            kind: Deployment
+            metadata:
+              name: app-dev
+              namespace: dev
+            spec:
+              replicas: 1
+              selector:
+                matchLabels:
+                  app: my-app
+              template:
+                metadata:
+                  labels:
+                    app: my-app
+                spec:
+                  containers:
+                  - name: web-app
+                    image: yulianna2022/my-app:develop
+                    ports:
+                    - containerPort: 80
+            ---
+            apiVersion: v1
+            kind: Service
+            metadata:
+              name: app-service-dev
+              namespace: dev
+            spec:
+              type: NodePort
+              selector:
+                app: my-app
+              ports:
+                - port: 80
+                  targetPort: 80
+                  nodePort: 30002
+            EOF
+
+            # 3. Деплоїмо RELEASE
+            cat <<EOF | kubectl apply -f -
+            apiVersion: apps/v1
+            kind: Deployment
+            metadata:
+              name: app-release
+              namespace: release
+            spec:
+              replicas: 1
+              selector:
+                matchLabels:
+                  app: my-app
+              template:
+                metadata:
+                  labels:
+                    app: my-app
+                spec:
+                  containers:
+                  - name: web-app
+                    image: yulianna2022/my-app:1.0.0
+                    ports:
+                    - containerPort: 80
+            ---
+            apiVersion: v1
+            kind: Service
+            metadata:
+              name: app-service-release
+              namespace: release
+            spec:
+              type: NodePort
+              selector:
+                app: my-app
+              ports:
+                - port: 80
+                  targetPort: 80
+                  nodePort: 30003
+            EOF
+
+            # 4. ЧЕКАЄМО ТА ПЕРЕВІРЯЄМО
+            echo "Waiting for pods to start..."
+            sleep 30
+            kubectl get pods -A
+            
+            # 5. ПОРТ-ФОРВАРД (вбиваємо старі і запускаємо нові)
+            pkill -f "port-forward" || true
             nohup kubectl port-forward --address 0.0.0.0 svc/app-service-dev 8002:80 -n dev > dev-pf.log 2>&1 &
             nohup kubectl port-forward --address 0.0.0.0 svc/app-service-release 8003:80 -n release > rel-pf.log 2>&1 &
+            
+            # Виведемо список процесів для перевірки
+            ps aux | grep port-forward
